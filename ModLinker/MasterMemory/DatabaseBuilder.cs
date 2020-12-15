@@ -29,7 +29,7 @@ namespace ModLinker
 
         public DatabaseBuilder Append(System.Collections.Generic.IEnumerable<Mod> dataSource)
         {
-            AppendCore(dataSource, x => x.Id, System.Collections.Generic.Comparer<int>.Default);
+            AppendCore(dataSource, x => x.Id, System.Collections.Generic.Comparer<Guid>.Default);
             return this;
         }
 

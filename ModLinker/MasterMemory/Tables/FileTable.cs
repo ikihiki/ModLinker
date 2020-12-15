@@ -57,8 +57,10 @@ namespace ModLinker.Tables
                 new MasterMemory.Meta.MetaProperty[]
                 {
                     new MasterMemory.Meta.MetaProperty(typeof(File).GetProperty("Path")),
-                    new MasterMemory.Meta.MetaProperty(typeof(File).GetProperty("Mod")),
+                    new MasterMemory.Meta.MetaProperty(typeof(File).GetProperty("ModId")),
                     new MasterMemory.Meta.MetaProperty(typeof(File).GetProperty("ModPath")),
+                    new MasterMemory.Meta.MetaProperty(typeof(File).GetProperty("TargetPath")),
+                    new MasterMemory.Meta.MetaProperty(typeof(File).GetProperty("Directory")),
                 },
                 new MasterMemory.Meta.MetaIndex[]{
                     new MasterMemory.Meta.MetaIndex(new System.Reflection.PropertyInfo[] {

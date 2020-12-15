@@ -57,6 +57,8 @@ namespace ModLinker.Tables
                 new MasterMemory.Meta.MetaProperty[]
                 {
                     new MasterMemory.Meta.MetaProperty(typeof(Directory).GetProperty("Path")),
+                    new MasterMemory.Meta.MetaProperty(typeof(Directory).GetProperty("ChildrenDirectory")),
+                    new MasterMemory.Meta.MetaProperty(typeof(Directory).GetProperty("Files")),
                 },
                 new MasterMemory.Meta.MetaIndex[]{
                     new MasterMemory.Meta.MetaIndex(new System.Reflection.PropertyInfo[] {

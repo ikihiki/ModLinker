@@ -11,8 +11,8 @@ namespace ModLinker.Tables
 {
    public sealed partial class ModTable : TableBase<Mod>, ITableUniqueValidate
    {
-        public Func<Mod, int> PrimaryKeySelector => primaryIndexSelector;
-        readonly Func<Mod, int> primaryIndexSelector;
+        public Func<Mod, Guid> PrimaryKeySelector => primaryIndexSelector;
+        readonly Func<Mod, Guid> primaryIndexSelector;
 
 
         public ModTable(Mod[] sortedData)
@@ -25,49 +25,24 @@ namespace ModLinker.Tables
         partial void OnAfterConstruct();
 
 
-        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-        public Mod FindById(int key)
+        public Mod FindById(Guid key)
         {
-            var lo = 0;
-            var hi = data.Length - 1;
-            while (lo <= hi)
-            {
-                var mid = (int)(((uint)hi + (uint)lo) >> 1);
-                var selected = data[mid].Id;
-                var found = (selected < key) ? -1 : (selected > key) ? 1 : 0;
-                if (found == 0) { return data[mid]; }
-                if (found < 0) { lo = mid + 1; }
-                else { hi = mid - 1; }
-            }
-            return default;
+            return FindUniqueCore(data, primaryIndexSelector, System.Collections.Generic.Comparer<Guid>.Default, key, false);
+        }
+        
+        public bool TryFindById(Guid key, out Mod result)
+        {
+            return TryFindUniqueCore(data, primaryIndexSelector, System.Collections.Generic.Comparer<Guid>.Default, key, out result);
         }
 
-        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-        public bool TryFindById(int key, out Mod result)
+        public Mod FindClosestById(Guid key, bool selectLower = true)
         {
-            var lo = 0;
-            var hi = data.Length - 1;
-            while (lo <= hi)
-            {
-                var mid = (int)(((uint)hi + (uint)lo) >> 1);
-                var selected = data[mid].Id;
-                var found = (selected < key) ? -1 : (selected > key) ? 1 : 0;
-                if (found == 0) { result = data[mid]; return true; }
-                if (found < 0) { lo = mid + 1; }
-                else { hi = mid - 1; }
-            }
-            result = default;
-            return false;
+            return FindUniqueClosestCore(data, primaryIndexSelector, System.Collections.Generic.Comparer<Guid>.Default, key, selectLower);
         }
 
-        public Mod FindClosestById(int key, bool selectLower = true)
+        public RangeView<Mod> FindRangeById(Guid min, Guid max, bool ascendant = true)
         {
-            return FindUniqueClosestCore(data, primaryIndexSelector, System.Collections.Generic.Comparer<int>.Default, key, selectLower);
-        }
-
-        public RangeView<Mod> FindRangeById(int min, int max, bool ascendant = true)
-        {
-            return FindUniqueRangeCore(data, primaryIndexSelector, System.Collections.Generic.Comparer<int>.Default, min, max, ascendant);
+            return FindUniqueRangeCore(data, primaryIndexSelector, System.Collections.Generic.Comparer<Guid>.Default, min, max, ascendant);
         }
 
 
@@ -90,7 +65,7 @@ namespace ModLinker.Tables
                 new MasterMemory.Meta.MetaIndex[]{
                     new MasterMemory.Meta.MetaIndex(new System.Reflection.PropertyInfo[] {
                         typeof(Mod).GetProperty("Id"),
-                    }, true, true, System.Collections.Generic.Comparer<int>.Default),
+                    }, true, true, System.Collections.Generic.Comparer<Guid>.Default),
                 });
         }
 

@@ -1,3 +1,4 @@
+using System;
 using MasterMemory;
 using MessagePack;
 
@@ -8,7 +9,9 @@ namespace ModLinker
     {
         [PrimaryKey]
         public string Path { get; set; }
-        public Mod Mod { get; set; }
+        public Guid ModId { get; set; }
         public string ModPath { get; set; }
+        public string TargetPath { get; set; }
+        public string Directory { get; set; }
     }
 }

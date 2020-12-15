@@ -108,7 +108,7 @@ namespace ModLinker
 
         public void ReplaceAll(System.Collections.Generic.IList<Mod> data)
         {
-            var newData = CloneAndSortBy(data, x => x.Id, System.Collections.Generic.Comparer<int>.Default);
+            var newData = CloneAndSortBy(data, x => x.Id, System.Collections.Generic.Comparer<Guid>.Default);
             var table = new ModTable(newData);
             memory = new MemoryDatabase(
                 memory.DirectoryTable,
@@ -119,10 +119,10 @@ namespace ModLinker
             );
         }
 
-        public void RemoveMod(int[] keys)
+        public void RemoveMod(Guid[] keys)
         {
-            var data = RemoveCore(memory.ModTable.GetRawDataUnsafe(), keys, x => x.Id, System.Collections.Generic.Comparer<int>.Default);
-            var newData = CloneAndSortBy(data, x => x.Id, System.Collections.Generic.Comparer<int>.Default);
+            var data = RemoveCore(memory.ModTable.GetRawDataUnsafe(), keys, x => x.Id, System.Collections.Generic.Comparer<Guid>.Default);
+            var newData = CloneAndSortBy(data, x => x.Id, System.Collections.Generic.Comparer<Guid>.Default);
             var table = new ModTable(newData);
             memory = new MemoryDatabase(
                 memory.DirectoryTable,
@@ -135,8 +135,8 @@ namespace ModLinker
 
         public void Diff(Mod[] addOrReplaceData)
         {
-            var data = DiffCore(memory.ModTable.GetRawDataUnsafe(), addOrReplaceData, x => x.Id, System.Collections.Generic.Comparer<int>.Default);
-            var newData = CloneAndSortBy(data, x => x.Id, System.Collections.Generic.Comparer<int>.Default);
+            var data = DiffCore(memory.ModTable.GetRawDataUnsafe(), addOrReplaceData, x => x.Id, System.Collections.Generic.Comparer<Guid>.Default);
+            var newData = CloneAndSortBy(data, x => x.Id, System.Collections.Generic.Comparer<Guid>.Default);
             var table = new ModTable(newData);
             memory = new MemoryDatabase(
                 memory.DirectoryTable,

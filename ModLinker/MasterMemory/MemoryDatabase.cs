@@ -15,19 +15,16 @@ namespace ModLinker
         public DirectoryTable DirectoryTable { get; private set; }
         public FileTable FileTable { get; private set; }
         public ModTable ModTable { get; private set; }
-        public TargetTable TargetTable { get; private set; }
 
         public MemoryDatabase(
             DirectoryTable DirectoryTable,
             FileTable FileTable,
-            ModTable ModTable,
-            TargetTable TargetTable
+            ModTable ModTable
         )
         {
             this.DirectoryTable = DirectoryTable;
             this.FileTable = FileTable;
             this.ModTable = ModTable;
-            this.TargetTable = TargetTable;
         }
 
         public MemoryDatabase(byte[] databaseBinary, bool internString = true, MessagePack.IFormatterResolver formatterResolver = null)
@@ -40,7 +37,6 @@ namespace ModLinker
             this.DirectoryTable = ExtractTableData<Directory, DirectoryTable>(header, databaseBinary, options, xs => new DirectoryTable(xs));
             this.FileTable = ExtractTableData<File, FileTable>(header, databaseBinary, options, xs => new FileTable(xs));
             this.ModTable = ExtractTableData<Mod, ModTable>(header, databaseBinary, options, xs => new ModTable(xs));
-            this.TargetTable = ExtractTableData<Target, TargetTable>(header, databaseBinary, options, xs => new TargetTable(xs));
         }
 
         public ImmutableBuilder ToImmutableBuilder()
@@ -54,7 +50,6 @@ namespace ModLinker
             builder.Append(this.DirectoryTable.GetRawDataUnsafe());
             builder.Append(this.FileTable.GetRawDataUnsafe());
             builder.Append(this.ModTable.GetRawDataUnsafe());
-            builder.Append(this.TargetTable.GetRawDataUnsafe());
             return builder;
         }
 
@@ -64,7 +59,6 @@ namespace ModLinker
             builder.Append(this.DirectoryTable.GetRawDataUnsafe());
             builder.Append(this.FileTable.GetRawDataUnsafe());
             builder.Append(this.ModTable.GetRawDataUnsafe());
-            builder.Append(this.TargetTable.GetRawDataUnsafe());
             return builder;
         }
 
@@ -76,7 +70,6 @@ namespace ModLinker
                 DirectoryTable,
                 FileTable,
                 ModTable,
-                TargetTable,
             });
 
             ((ITableUniqueValidate)DirectoryTable).ValidateUnique(result);
@@ -85,8 +78,6 @@ namespace ModLinker
             ValidateTable(FileTable.All, database, "Path", FileTable.PrimaryKeySelector, result);
             ((ITableUniqueValidate)ModTable).ValidateUnique(result);
             ValidateTable(ModTable.All, database, "Id", ModTable.PrimaryKeySelector, result);
-            ((ITableUniqueValidate)TargetTable).ValidateUnique(result);
-            ValidateTable(TargetTable.All, database, "Id", TargetTable.PrimaryKeySelector, result);
 
             return result;
         }
@@ -103,8 +94,6 @@ namespace ModLinker
                     return db.FileTable;
                 case "mods":
                     return db.ModTable;
-                case "target":
-                    return db.TargetTable;
                 
                 default:
                     return null;
@@ -119,7 +108,6 @@ namespace ModLinker
             dict.Add("directories", ModLinker.Tables.DirectoryTable.CreateMetaTable());
             dict.Add("files", ModLinker.Tables.FileTable.CreateMetaTable());
             dict.Add("mods", ModLinker.Tables.ModTable.CreateMetaTable());
-            dict.Add("target", ModLinker.Tables.TargetTable.CreateMetaTable());
 
             metaTable = new MasterMemory.Meta.MetaDatabase(dict);
             return metaTable;

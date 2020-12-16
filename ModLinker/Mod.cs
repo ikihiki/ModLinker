@@ -13,6 +13,7 @@ namespace ModLinker
         [SecondaryKey(0)]
         public int Order { get; set; }
         public string Name { get; set; }
+        public string EntityPath{ get; set; }
         public string RootPath { get; set; }
         public IEnumerable<Link> Links { get; set; }
         public string Url { get; set; }

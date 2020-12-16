@@ -6,6 +6,7 @@
   <ItemGroup>
       <PackageReference Include="MasterMemory" Version="2.3.4" />
       <PackageReference Include="MasterMemory.MSBuild.Tasks" Version="2.3.4" PrivateAssets="All" />
+      <PackageReference Include="YamlDotNet" Version="9.1.0" />
   </ItemGroup>
 
   <Target Name="MasterMemoryGen" BeforeTargets="BeforeBuild">

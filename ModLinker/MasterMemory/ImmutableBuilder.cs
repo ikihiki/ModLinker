@@ -31,8 +31,7 @@ namespace ModLinker
             memory = new MemoryDatabase(
                 table,
                 memory.FileTable,
-                memory.ModTable,
-                memory.TargetTable
+                memory.ModTable
             
             );
         }
@@ -45,8 +44,7 @@ namespace ModLinker
             memory = new MemoryDatabase(
                 table,
                 memory.FileTable,
-                memory.ModTable,
-                memory.TargetTable
+                memory.ModTable
             
             );
         }
@@ -59,8 +57,7 @@ namespace ModLinker
             memory = new MemoryDatabase(
                 table,
                 memory.FileTable,
-                memory.ModTable,
-                memory.TargetTable
+                memory.ModTable
             
             );
         }
@@ -72,8 +69,7 @@ namespace ModLinker
             memory = new MemoryDatabase(
                 memory.DirectoryTable,
                 table,
-                memory.ModTable,
-                memory.TargetTable
+                memory.ModTable
             
             );
         }
@@ -86,8 +82,7 @@ namespace ModLinker
             memory = new MemoryDatabase(
                 memory.DirectoryTable,
                 table,
-                memory.ModTable,
-                memory.TargetTable
+                memory.ModTable
             
             );
         }
@@ -100,8 +95,7 @@ namespace ModLinker
             memory = new MemoryDatabase(
                 memory.DirectoryTable,
                 table,
-                memory.ModTable,
-                memory.TargetTable
+                memory.ModTable
             
             );
         }
@@ -113,8 +107,7 @@ namespace ModLinker
             memory = new MemoryDatabase(
                 memory.DirectoryTable,
                 memory.FileTable,
-                table,
-                memory.TargetTable
+                table
             
             );
         }
@@ -127,8 +120,7 @@ namespace ModLinker
             memory = new MemoryDatabase(
                 memory.DirectoryTable,
                 memory.FileTable,
-                table,
-                memory.TargetTable
+                table
             
             );
         }
@@ -141,48 +133,6 @@ namespace ModLinker
             memory = new MemoryDatabase(
                 memory.DirectoryTable,
                 memory.FileTable,
-                table,
-                memory.TargetTable
-            
-            );
-        }
-
-        public void ReplaceAll(System.Collections.Generic.IList<Target> data)
-        {
-            var newData = CloneAndSortBy(data, x => x.Id, System.Collections.Generic.Comparer<int>.Default);
-            var table = new TargetTable(newData);
-            memory = new MemoryDatabase(
-                memory.DirectoryTable,
-                memory.FileTable,
-                memory.ModTable,
-                table
-            
-            );
-        }
-
-        public void RemoveTarget(int[] keys)
-        {
-            var data = RemoveCore(memory.TargetTable.GetRawDataUnsafe(), keys, x => x.Id, System.Collections.Generic.Comparer<int>.Default);
-            var newData = CloneAndSortBy(data, x => x.Id, System.Collections.Generic.Comparer<int>.Default);
-            var table = new TargetTable(newData);
-            memory = new MemoryDatabase(
-                memory.DirectoryTable,
-                memory.FileTable,
-                memory.ModTable,
-                table
-            
-            );
-        }
-
-        public void Diff(Target[] addOrReplaceData)
-        {
-            var data = DiffCore(memory.TargetTable.GetRawDataUnsafe(), addOrReplaceData, x => x.Id, System.Collections.Generic.Comparer<int>.Default);
-            var newData = CloneAndSortBy(data, x => x.Id, System.Collections.Generic.Comparer<int>.Default);
-            var table = new TargetTable(newData);
-            memory = new MemoryDatabase(
-                memory.DirectoryTable,
-                memory.FileTable,
-                memory.ModTable,
                 table
             
             );

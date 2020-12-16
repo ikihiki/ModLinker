@@ -45,12 +45,11 @@ namespace ModLinker
 
         static MasterMemoryResolverGetFormatterHelper()
         {
-            lookup = new global::System.Collections.Generic.Dictionary<Type, int>(4)
+            lookup = new global::System.Collections.Generic.Dictionary<Type, int>(3)
             {
                 {typeof(Directory[]), 0 },
                 {typeof(File[]), 1 },
                 {typeof(Mod[]), 2 },
-                {typeof(Target[]), 3 },
             };
         }
 
@@ -64,7 +63,6 @@ namespace ModLinker
                 case 0: return new MessagePack.Formatters.ArrayFormatter<Directory>();
                 case 1: return new MessagePack.Formatters.ArrayFormatter<File>();
                 case 2: return new MessagePack.Formatters.ArrayFormatter<Mod>();
-                case 3: return new MessagePack.Formatters.ArrayFormatter<Target>();
                 default: return null;
             }
         }

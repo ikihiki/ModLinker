@@ -14,16 +14,21 @@ namespace ModLinker.Tables
         public Func<Mod, Guid> PrimaryKeySelector => primaryIndexSelector;
         readonly Func<Mod, Guid> primaryIndexSelector;
 
+        readonly Mod[] secondaryIndex0;
+        readonly Func<Mod, int> secondaryIndex0Selector;
 
         public ModTable(Mod[] sortedData)
             : base(sortedData)
         {
             this.primaryIndexSelector = x => x.Id;
+            this.secondaryIndex0Selector = x => x.Order;
+            this.secondaryIndex0 = CloneAndSortBy(this.secondaryIndex0Selector, System.Collections.Generic.Comparer<int>.Default);
             OnAfterConstruct();
         }
 
         partial void OnAfterConstruct();
 
+        public RangeView<Mod> SortByOrder => new RangeView<Mod>(secondaryIndex0, 0, secondaryIndex0.Length - 1, true);
 
         public Mod FindById(Guid key)
         {
@@ -45,10 +50,31 @@ namespace ModLinker.Tables
             return FindUniqueRangeCore(data, primaryIndexSelector, System.Collections.Generic.Comparer<Guid>.Default, min, max, ascendant);
         }
 
+        public Mod FindByOrder(int key)
+        {
+            return FindUniqueCoreInt(secondaryIndex0, secondaryIndex0Selector, System.Collections.Generic.Comparer<int>.Default, key, false);
+        }
+        
+        public bool TryFindByOrder(int key, out Mod result)
+        {
+            return TryFindUniqueCoreInt(secondaryIndex0, secondaryIndex0Selector, System.Collections.Generic.Comparer<int>.Default, key, out result);
+        }
+
+        public Mod FindClosestByOrder(int key, bool selectLower = true)
+        {
+            return FindUniqueClosestCore(secondaryIndex0, secondaryIndex0Selector, System.Collections.Generic.Comparer<int>.Default, key, selectLower);
+        }
+
+        public RangeView<Mod> FindRangeByOrder(int min, int max, bool ascendant = true)
+        {
+            return FindUniqueRangeCore(secondaryIndex0, secondaryIndex0Selector, System.Collections.Generic.Comparer<int>.Default, min, max, ascendant);
+        }
+
 
         void ITableUniqueValidate.ValidateUnique(ValidateResult resultSet)
         {
             ValidateUniqueCore(data, primaryIndexSelector, "Id", resultSet);       
+            ValidateUniqueCore(secondaryIndex0, secondaryIndex0Selector, "Order", resultSet);       
         }
 
         public static MasterMemory.Meta.MetaTable CreateMetaTable()
@@ -57,7 +83,10 @@ namespace ModLinker.Tables
                 new MasterMemory.Meta.MetaProperty[]
                 {
                     new MasterMemory.Meta.MetaProperty(typeof(Mod).GetProperty("Id")),
+                    new MasterMemory.Meta.MetaProperty(typeof(Mod).GetProperty("Order")),
                     new MasterMemory.Meta.MetaProperty(typeof(Mod).GetProperty("Name")),
+                    new MasterMemory.Meta.MetaProperty(typeof(Mod).GetProperty("EntityPath")),
+                    new MasterMemory.Meta.MetaProperty(typeof(Mod).GetProperty("RootPath")),
                     new MasterMemory.Meta.MetaProperty(typeof(Mod).GetProperty("Links")),
                     new MasterMemory.Meta.MetaProperty(typeof(Mod).GetProperty("Url")),
                     new MasterMemory.Meta.MetaProperty(typeof(Mod).GetProperty("Description")),
@@ -66,6 +95,9 @@ namespace ModLinker.Tables
                     new MasterMemory.Meta.MetaIndex(new System.Reflection.PropertyInfo[] {
                         typeof(Mod).GetProperty("Id"),
                     }, true, true, System.Collections.Generic.Comparer<Guid>.Default),
+                    new MasterMemory.Meta.MetaIndex(new System.Reflection.PropertyInfo[] {
+                        typeof(Mod).GetProperty("Order"),
+                    }, false, true, System.Collections.Generic.Comparer<int>.Default),
                 });
         }
 

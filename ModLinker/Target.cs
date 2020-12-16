@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using MasterMemory;
 using MessagePack;
@@ -20,123 +21,134 @@ namespace ModLinker
         {
             var builder = new DatabaseBuilder();
             builder.Append(Mods);
-            Dictionary<string, Directory> directories = new Dictionary<string, Directory>();
-            Dictionary<string, File> files = new Dictionary<string, File>();
-            foreach (var mod in Mods)
+            Dictionary<string, Directory> directoryList = new Dictionary<string, Directory>();
+            Dictionary<string, File> fileList = new Dictionary<string, File>();
+            foreach (var mod in Mods.OrderBy(mod=>mod.Order))
             {
-                foreach (var dir in GetDirectories(mod))
+                var (dirs, files) = GetDirectoriesAndFiles(mod);
+                foreach (var dir in dirs)
                 {
-                    if (directories.ContainsKey(dir.Path))
+                    if (directoryList.ContainsKey(dir.Path))
                     {
-                        directories[dir.Path].ChildrenDirectory =
-                            directories[dir.Path].ChildrenDirectory.Concat(dir.ChildrenDirectory)
+                        directoryList[dir.Path].ChildrenDirectory =
+                            directoryList[dir.Path].ChildrenDirectory.Concat(dir.ChildrenDirectory)
                             .Distinct()
                             ;
-                        directories[dir.Path].Files =
-                            directories[dir.Path].Files.Concat(dir.Files)
+                        directoryList[dir.Path].Files =
+                            directoryList[dir.Path].Files.Concat(dir.Files)
                             .Distinct()
                             ;
                     }
                     else
                     {
-                        directories.Add(dir.Path, dir);
+                        directoryList.Add(dir.Path, dir);
                     }
                 }
 
-                foreach(var file in GetFiles(mod))
+                foreach (var file in files)
                 {
-                    files[file.Path] = file;
+                    fileList[file.Path] = file;
                 }
             }
-            builder.Append(directories.Values);
-            builder.Append(files.Values);
+            builder.Append(directoryList.Values);
+            builder.Append(fileList.Values);
             database = new MemoryDatabase(builder.Build());
         }
 
-        private IEnumerable<Directory> GetDirectories(Mod mod)
+        private (IEnumerable<Directory> directory, IEnumerable<File> file) GetDirectoriesAndFiles(Mod mod)
         {
             return mod switch
             {
                 _ when System.IO.Directory.Exists(mod.EntityPath)
-                    => GetDirectoriesFromDrectory(mod),
+                    => GetDirectoriesAndFilesFromDrectory(mod),
                 _ when System.IO.File.Exists(mod.EntityPath) && Path.GetExtension(mod.EntityPath) == "zip"
-                    => GetDirectoriesFromZip(mod),
-                _ => Enumerable.Empty<Directory>()
+                    => GetDirectoriesAndFilesFromZip(mod),
+                _ => (Enumerable.Empty<Directory>(),Enumerable.Empty<File>())
             };
         }
-        private IEnumerable<Directory> GetDirectoriesFromDrectory(Mod mod)
+        private (IEnumerable<Directory> directory, IEnumerable<File> file) GetDirectoriesAndFilesFromDrectory(Mod mod)
         {
             var rootDir = new DirectoryInfo(Path.Combine(mod.EntityPath, mod.RootPath));
             if (!rootDir.Exists)
             {
-                return Enumerable.Empty<Directory>();
+                return (Enumerable.Empty<Directory>(), Enumerable.Empty<File>());
             }
 
-            return mod.Links
-                .SelectMany(link =>
-                {
-                    var linkRoot = new DirectoryInfo(Path.Combine(rootDir.FullName, link.ModPath));
-                    if (!linkRoot.Exists)
+            return (
+                mod.Links
+                    .SelectMany(link =>
                     {
-                        return Enumerable.Empty<Directory>();
-                    }
-                    return linkRoot.EnumerateDirectories("*", new EnumerationOptions { RecurseSubdirectories = true })
-                    .Select(dir => new Directory
+                        var linkRoot = new DirectoryInfo(Path.Combine(rootDir.FullName, link.ModPath));
+                        if (!linkRoot.Exists)
+                        {
+                            return Enumerable.Empty<Directory>();
+                        }
+                        return linkRoot.EnumerateDirectories("*", new EnumerationOptions { RecurseSubdirectories = true })
+                        .Select(dir => new Directory
+                        {
+                            ChildrenDirectory = dir.EnumerateDirectories().Select(child => Path.Combine(link.TargetPath, Path.GetRelativePath(child.FullName, linkRoot.FullName))),
+                            Files = dir.EnumerateFiles().Select(file => Path.Combine(link.TargetPath, Path.GetRelativePath(file.FullName, rootDir.FullName))),
+                            Path = Path.Combine(link.TargetPath, Path.GetRelativePath(dir.FullName, rootDir.FullName))
+                        });
+                    }),
+                mod.Links
+                    .SelectMany(link =>
                     {
-                        ChildrenDirectory = dir.EnumerateDirectories().Select(child => Path.Combine(link.TargetPath, Path.GetRelativePath(child.FullName, linkRoot.FullName))),
-                        Files = dir.EnumerateFiles().Select(file => Path.Combine(link.TargetPath, Path.GetRelativePath(file.FullName, rootDir.FullName))),
-                        Path = Path.Combine(link.TargetPath, Path.GetRelativePath(dir.FullName, rootDir.FullName))
-                    });
-                });
+                        var linkRoot = new DirectoryInfo(Path.Combine(rootDir.FullName, link.ModPath));
+                        if (!linkRoot.Exists)
+                        {
+                            return Enumerable.Empty<File>();
+                        }
+                        return linkRoot.EnumerateFiles("*", new EnumerationOptions { RecurseSubdirectories = true })
+                        .Select(file => new File
+                        {
+                            Directory = Path.Combine(link.TargetPath, Path.GetRelativePath(file.DirectoryName, linkRoot.FullName)),
+                            ModId = mod.Id,
+                            ModPath = Path.GetRelativePath(mod.EntityPath, file.FullName),
+                            Path = Path.Combine(link.TargetPath, Path.GetRelativePath(file.FullName, linkRoot.FullName))
+                        });
+                    })
+                );
         }
 
-        private IEnumerable<Directory> GetDirectoriesFromZip(Mod mod)
+        private (IEnumerable<Directory> directory, IEnumerable<File> file) GetDirectoriesAndFilesFromZip(Mod mod)
         {
-
-        }
-
-        private IEnumerable<File> GetFiles(Mod mod)
-        {
-            return mod switch
+            try
             {
-                _ when System.IO.Directory.Exists(mod.EntityPath)
-                    => GetFilesFromDrectory(mod),
-                _ when System.IO.File.Exists(mod.EntityPath) && Path.GetExtension(mod.EntityPath) == "zip"
-                    => GetFilesFromZip(mod),
-                _ => Enumerable.Empty<File>()
-            };
-        }
-
-        private IEnumerable<File> GetFilesFromZip(Mod mod)
-        {
-            throw new NotImplementedException();
-        }
-
-        private IEnumerable<File> GetFilesFromDrectory(Mod mod)
-        {
-            var rootDir = new DirectoryInfo(Path.Combine(mod.EntityPath, mod.RootPath));
-            if (!rootDir.Exists)
-            {
-                return Enumerable.Empty<File>();
+                using ZipArchive archive = ZipFile.OpenRead(mod.EntityPath);
+                var files = archive.Entries.ToDictionary(entory => entory.FullName);
+                var dirs = files.Keys.Select(Path.GetDirectoryName)
+                                .Select(dir => path)
+                return (
+                    mod.Links
+                        .SelectMany(link =>
+                        {
+                            return linkRoot.EnumerateDirectories("*", new EnumerationOptions { RecurseSubdirectories = true })
+                            .Select(dir => new Directory
+                            {
+                                ChildrenDirectory = dir.EnumerateDirectories().Select(child => Path.Combine(link.TargetPath, Path.GetRelativePath(child.FullName, linkRoot.FullName))),
+                                Files = dir.EnumerateFiles().Select(file => Path.Combine(link.TargetPath, Path.GetRelativePath(file.FullName, rootDir.FullName))),
+                                Path = Path.Combine(link.TargetPath, Path.GetRelativePath(dir.FullName, rootDir.FullName))
+                            });
+                        }),
+                    mod.Links
+                        .SelectMany(link =>
+                        {
+                            return files.Values.Where(file => file.FullName.StartsWith(link.ModPath))
+                                .Select(file => new File
+                                {
+                                    Directory = Path.GetDirectoryName(file.FullName),
+                                    ModId = mod.Id,
+                                    ModPath = file.FullName,
+                                    Path = Path.Combine(link.TargetPath, file.FullName.Replace(link.ModPath, "")),
+                                });
+                        })
+                );
             }
-
-            return mod.Links
-                .SelectMany(link =>
-                {
-                    var linkRoot = new DirectoryInfo(Path.Combine(rootDir.FullName, link.ModPath));
-                    if (!linkRoot.Exists)
-                    {
-                        return Enumerable.Empty<File>();
-                    }
-                    return linkRoot.EnumerateFiles("*", new EnumerationOptions { RecurseSubdirectories = true })
-                    .Select(file => new File
-                    {
-                        Directory = Path.Combine(link.TargetPath, Path.GetRelativePath(file.DirectoryName, linkRoot.FullName)),
-                        ModId = mod.Id,
-                        ModPath = Path.GetRelativePath(mod.EntityPath, file.FullName),
-                        Path = Path.Combine(link.TargetPath, Path.GetRelativePath(file.FullName, linkRoot.FullName))
-                    });
-                });
+            catch
+            {
+                return (Enumerable.Empty<Directory>(), Enumerable.Empty<File>());
+            }
         }
     }
 }

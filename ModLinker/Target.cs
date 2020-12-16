@@ -111,24 +111,54 @@ namespace ModLinker
                 );
         }
 
+        private static IEnumerable<string> GetAllDirs(IEnumerable<string> other, string path)
+        {
+            var parent = Path.GetDirectoryName(path);
+            if(string.IsNullOrEmpty(parent))
+            {
+                return other;
+            }else{
+                return GetAllDirs(other, parent).Concat(new[] { parent });
+            }
+        }
+
+
         private (IEnumerable<Directory> directory, IEnumerable<File> file) GetDirectoriesAndFilesFromZip(Mod mod)
         {
             try
             {
                 using ZipArchive archive = ZipFile.OpenRead(mod.EntityPath);
                 var files = archive.Entries.ToDictionary(entory => entory.FullName);
-                var dirs = files.Keys.Select(Path.GetDirectoryName)
-                                .Select(dir => path)
+                var dirs = files.Keys.SelectMany(file => GetAllDirs(Enumerable.Empty<string>(), file))
+                    .Distinct()
+                    .ToDictionary(dir => dir, dir => new { Path = dir, Children = new List<string>(), Files = new List<string>() });
+                foreach(var dir in dirs.Values)
+                {
+                    var parent = Path.GetDirectoryName(dir.Path);
+                    if(!string.IsNullOrEmpty(parent) && dirs.ContainsKey(parent))
+                    {
+                        dirs[parent].Children.Add(dir.Path);
+                    }
+                }
+                foreach(var file in files.Keys)
+                {
+                    var parent = Path.GetDirectoryName(file);
+                    if (!string.IsNullOrEmpty(parent) && dirs.ContainsKey(parent))
+                    {
+                        dirs[parent].Files.Add(file);
+                    }  
+                }
+
                 return (
                     mod.Links
                         .SelectMany(link =>
                         {
-                            return linkRoot.EnumerateDirectories("*", new EnumerationOptions { RecurseSubdirectories = true })
+                            return dirs.Values.Where(dir => dir.Path.StartsWith(link.ModPath))
                             .Select(dir => new Directory
                             {
-                                ChildrenDirectory = dir.EnumerateDirectories().Select(child => Path.Combine(link.TargetPath, Path.GetRelativePath(child.FullName, linkRoot.FullName))),
-                                Files = dir.EnumerateFiles().Select(file => Path.Combine(link.TargetPath, Path.GetRelativePath(file.FullName, rootDir.FullName))),
-                                Path = Path.Combine(link.TargetPath, Path.GetRelativePath(dir.FullName, rootDir.FullName))
+                                ChildrenDirectory = dir.Children.Select(child => Path.Combine(link.TargetPath, child.Replace(link.ModPath, ""))),
+                                Files = dir.Files.Select(file => Path.Combine(link.TargetPath, file.Replace(link.ModPath, ""))),
+                                Path = Path.Combine(link.TargetPath, dir.Path.Replace(link.ModPath, ""))
                             });
                         }),
                     mod.Links

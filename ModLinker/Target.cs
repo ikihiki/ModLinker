@@ -14,6 +14,7 @@ namespace ModLinker
         public string RootPath { get; set; }
         public string ModDirectory { get; set; }
         public IEnumerable<Mod> Mods { get; set; }
+        public string OverlayPath { get; set; }
 
         private MemoryDatabase database;
 

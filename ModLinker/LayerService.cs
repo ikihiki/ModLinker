@@ -1,53 +1,117 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
 using System.Linq;
+using System.Security;
 using System.Text;
 using System.Threading.Tasks;
+using DokanNet;
 
 namespace ModLinker
 {
-    class LayerService
+    public class LayerService:IDisposable
     {
         private readonly Target target;
         private readonly IEnumerable<Mod> mods;
         private readonly IEnumerable<ILayerProvider> layerProviders;
+        private readonly List<ILayer> layerList = new List<ILayer>();
+        public event Action Notify;
 
-        private readonly List<ILayer> layers = new List<ILayer>();
-
-        public LayerService(Target target, IEnumerable<Mod> mods, IEnumerable<ILayerProvider> layerProviders)
+        public LayerService(Target target, IEnumerable<ILayerProvider> layerProviders)
         {
             this.target = target;
-            this.mods = mods;
+            this.mods = target.Mods;
             this.layerProviders = layerProviders;
-            layers.Add(new  BaseLayer(target.RootPath));
+            layerList.Add(new  BaseLayer(target.BasePath));
             foreach (var mod in mods)
             {
-                var layer = GetLayer(mod);
-                if (layer != null)
+                var layers = GetLayers(mod);
+                if (layers != null)
                 {
-                    layers.Add(layer);
+                    layerList.AddRange(layers);
                 }
             }
 
-            layers.Add(new OverlayLayer());
+            layerList.Add(new OverlayLayer(target.OverlayPath));
+            foreach (var layer in layerList)
+            {
+                layer.Notify+=LayerOnNotify;
+            }
         }
 
-        private ILayer GetLayer(Mod mod)
+        private void LayerOnNotify(IEntry obj)
+        {
+            Notify?.Invoke();
+        }
+
+        public IEnumerable<IEntry> GetEntries(string path)
+        {
+            var entries = new Dictionary<string, IEntry>();
+
+            foreach (var entry in layerList.SelectMany(layer => layer.GetEntries(path)))
+            {
+                entries[entry.Path] = entry;
+            }
+            return entries.Values;
+        }
+
+        private IEnumerable<ILayer> GetLayers(Mod mod)
         {
             foreach (var layerProvider in layerProviders)
             {
-                if (layerProvider.CanCreateLayer(mod.EntityPath))
+                if (layerProvider.CanCreateLayer(mod))
                 {
-                    return layerProvider.CreateLayer(mod.EntityPath, mod.Links);
+                    return layerProvider.CreateLayer(mod);
                 }
             }
 
             return null;
         }
 
+
         public void CreateDatabase()
         {
 
+        }
+
+        public void Dispose()
+        {
+            foreach (var layer in layerList)
+            {
+                layer.Dispose();
+            }
+            layerList.Clear();
+        }
+
+        public IEntry GetEntry(string fileName)
+        {
+            throw new NotImplementedException();
+        }
+
+        internal IFileHandle UpdateWritable(IFileHandle handle)
+        {
+            throw new NotImplementedException();
+        }
+
+        public NtStatus DeleteFile(string fileName)
+        {
+            throw new NotImplementedException();
+        }
+
+        internal NtStatus DeleteDirectory(string fileName)
+        {
+            throw new NotImplementedException();
+        }
+
+        internal NtStatus MoveFile(string oldName, string newName)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IEntry UpdateWritable(IEntry handle)
+        {
+            throw new NotImplementedException();
         }
     }
 }

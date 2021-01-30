@@ -7,11 +7,12 @@ using System.Threading.Tasks;
 
 namespace ModLinker
 {
-    public interface ILayer
+    public interface ILayer : IDisposable
     {
-
         IEnumerable<string> GetAllDirectories();
         IEnumerable<string> GetAllFiles();
         Stream GetFile(string path);
+        IEnumerable<IEntry> GetEntries(string path);
+        event Action<IEntry> Notify;
     }
 }

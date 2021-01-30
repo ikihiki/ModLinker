@@ -30,7 +30,7 @@ namespace ModLinker.Test
             provder.CanCreateLayer(testPath);
 
             var links = new List<Link>() {new Link() {ModPath = "/picture", TargetPath = "/mod/picture"}};
-            Layer layer = provder.CreateLayer(testPath, links);
+            v layer = provder.CreateLayer(testPath, links);
             
             
             layer.GetDirectory()

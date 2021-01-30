@@ -6,9 +6,7 @@ using System.Threading.Tasks;
 
 namespace ModLinker
 {
-    public interface ILayerProvider
+    class FileOperator
     {
-        bool CanCreateLayer(Mod mod);
-        IEnumerable<ILayer> CreateLayer(Mod mod);
     }
 }

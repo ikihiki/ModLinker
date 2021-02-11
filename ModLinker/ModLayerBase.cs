@@ -41,12 +41,17 @@ namespace ModLinker
             throw new NotImplementedException();
         }
 
-        public IEnumerable<Entry> GetEntries(string path)
+        public IEnumerable<IEntry> GetEntries(string path)
         {
             throw new NotImplementedException();
         }
 
-        public event Action<Entry> Notify;
+        public event Action<string> CreateNotify;
+        public event Action<string> UpdateNotify;
+        public event Action<string> DeleteNotify;
+        public event Action<(string oldPath, string newPath)> RenameNotify;
+
+        public event Action<IEntry> Notify;
 
         public void Dispose()
         {

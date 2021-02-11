@@ -13,6 +13,9 @@ namespace ModLinker
         IEnumerable<string> GetAllFiles();
         Stream GetFile(string path);
         IEnumerable<IEntry> GetEntries(string path);
-        event Action<IEntry> Notify;
+        event Action<string> CreateNotify;
+        event Action<string> UpdateNotify;
+        event Action<string> DeleteNotify;
+        event Action<(string oldPath, string newPath)> RenameNotify;
     }
 }

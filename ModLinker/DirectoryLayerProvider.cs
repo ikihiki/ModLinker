@@ -79,6 +79,11 @@ namespace ModLinker
             }
         }
 
+        public event Action<string> CreateNotify;
+        public event Action<string> UpdateNotify;
+        public event Action<string> DeleteNotify;
+        public event Action<(string oldPath, string newPath)> RenameNotify;
+
         public event Action<IEntry> Notify;
 
 
@@ -90,16 +95,7 @@ namespace ModLinker
                 {
                     return new[]
                     {
-                        new Entry
-                        {
-                            Path = "\\" + Path.Combine(rootParts.Take(i+1).ToArray()), 
-                            CreationTime = rootDirectoryInfo.CreationTime,
-                            LastAccessTime = rootDirectoryInfo.LastAccessTime,
-                            LastWriteTime = rootDirectoryInfo.LastWriteTime,
-                            Name = rootParts[i],
-                            IsDirectory = true, 
-                            Layer = this
-                        }
+                        new DirectoryEntry("\\" + Path.Combine(rootParts.Take(i+1).ToArray()),"", this,false)
                     };
                 }
 

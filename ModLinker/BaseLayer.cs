@@ -13,6 +13,10 @@ namespace ModLinker
         private readonly FileSystemWatcher fileSystemWatcher;
 
         public event Action<IEntry> Notify;
+        public event Action<string> CreateNotify;
+        public event Action<string> UpdateNotify;
+        public event Action<string> DeleteNotify;
+        public event Action<(string oldPath, string newPath)> RenameNotify;
 
         public BaseLayer(string rootPath)
         {
@@ -31,35 +35,39 @@ namespace ModLinker
 
         private void FileSystemWatcherOnRenamed(object sender, RenamedEventArgs e)
         {
+            throw new NotImplementedException();
             if (Notify is not null)
             {
-                Notify.Invoke(new IEntry { Path = e.FullPath});
+                //Notify.Invoke(new IEntry { Path = e.FullPath});
             }
             
         }
 
         private void FileSystemWatcherOnDeleted(object sender, FileSystemEventArgs e)
         {
+            throw new NotImplementedException();
             if (Notify is not null)
             {
-                Notify.Invoke(new IEntry { Path = e.FullPath });
+                //Notify.Invoke(new IEntry { Path = e.FullPath });
             }
 
         }
 
         private void FileSystemWatcherOnCreated(object sender, FileSystemEventArgs e)
         {
+            throw new NotImplementedException();
             if (Notify is not null)
             {
-                Notify.Invoke(new IEntry { Path = e.FullPath });
+                //Notify.Invoke(new IEntry { Path = e.FullPath });
             }
         }
 
         private void FileSystemWatcherOnChanged(object sender, FileSystemEventArgs e)
         {
+            throw new NotImplementedException();
             if (Notify is not null)
             {
-                Notify.Invoke(new IEntry { Path = e.FullPath });
+                //Notify.Invoke(new IEntry { Path = e.FullPath });
             }
         }
 
@@ -100,33 +108,35 @@ namespace ModLinker
 
         private IEntry CreateEntryFromFile(string file)
         {
+            throw new NotImplementedException();
             var info = new FileInfo(file);
-            return new Entry
-            {
-                Path = "\\" + Path.GetRelativePath(rootPath, file),
-                Name = info.Name,
-                CreationTime = info.CreationTime,
-                LastAccessTime = info.LastAccessTime,
-                LastWriteTime = info.LastWriteTime,
-                Length = info.Length,
-                IsDirectory = false,
-                Layer = this
-            };
+            //return new Entry
+            //{
+            //    Path = "\\" + Path.GetRelativePath(rootPath, file),
+            //    Name = info.Name,
+            //    CreationTime = info.CreationTime,
+            //    LastAccessTime = info.LastAccessTime,
+            //    LastWriteTime = info.LastWriteTime,
+            //    Length = info.Length,
+            //    IsDirectory = false,
+            //    Layer = this
+            //};
         }
 
         private IEntry CreateEntryFromDirectory(string dir)
         {
+            throw new NotImplementedException();
             var info = new DirectoryInfo(dir);
-            return new Entry
-            {
-                Path = "\\" + Path.GetRelativePath(rootPath, dir),
-                Name = info.Name,
-                CreationTime = info.CreationTime,
-                LastAccessTime =info.LastAccessTime,
-                LastWriteTime =  info.LastWriteTime,
-                IsDirectory = true,
-                Layer = this
-            };
+            //return new Entry
+            //{
+            //    Path = "\\" + Path.GetRelativePath(rootPath, dir),
+            //    Name = info.Name,
+            //    CreationTime = info.CreationTime,
+            //    LastAccessTime =info.LastAccessTime,
+            //    LastWriteTime =  info.LastWriteTime,
+            //    IsDirectory = true,
+            //    Layer = this
+            //};
         }
 
         public void Dispose()

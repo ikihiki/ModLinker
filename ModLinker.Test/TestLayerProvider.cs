@@ -13,9 +13,19 @@ namespace ModLinker.Test
             return true;
         }
 
-        public Layer CreateLayer(string path, List<Link> links)
+        public ILayer CreateLayer(string path, List<Link> links)
         {
             return new TestLayer(links);
+        }
+
+        public bool CanCreateLayer(Mod mod)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IEnumerable<ILayer> CreateLayer(Mod mod)
+        {
+            throw new NotImplementedException();
         }
     }
 }

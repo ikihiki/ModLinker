@@ -34,7 +34,7 @@ namespace ModLinker
             {
                 if (entry.IsDirectory)
                 {
-                    return 
+                    return DokanResult.Success;
                 }
 
                 IFileHandle handle;
@@ -45,6 +45,7 @@ namespace ModLinker
                 }
                 return result;
             }
+            return DokanResult.Success;
         }
 
         public void Cleanup(string fileName, IDokanFileInfo info)
@@ -171,6 +172,8 @@ namespace ModLinker
         public NtStatus FindFilesWithPattern(string fileName, string searchPattern, out IList<FileInformation> files, IDokanFileInfo info)
         {
             var entry = layerService.GetEntry(fileName);
+            files = new List<FileInformation>();
+            return DokanResult.Success;
         }
 
         public NtStatus SetFileAttributes(string fileName, FileAttributes attributes, IDokanFileInfo info)

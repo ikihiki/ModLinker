@@ -36,7 +36,7 @@ namespace ModLinker
             layerList.Add(new OverlayLayer(target.OverlayPath));
             foreach (var layer in layerList)
             {
-                layer.Notify+=LayerOnNotify;
+                //layer.CreateNotify+=LayerOnNotify;
             }
         }
 

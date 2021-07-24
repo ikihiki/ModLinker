@@ -13,14 +13,15 @@ namespace ModLinker
     public interface IEntry
     {
         public string Path { get; }
-        public string Name { get;  }
-        public bool IsDirectory { get;  }
-        public ILayer Layer { get;  }
-        public DateTime? CreationTime { get;  }
+        public string Name { get; }
+        public bool IsDirectory { get; }
+        public ILayer Layer { get; }
+        public DateTime? CreationTime { get; }
         public DateTime? LastAccessTime { get; }
-        public DateTime? LastWriteTime { get;  }
+        public DateTime? LastWriteTime { get; }
         public long Length { get; }
         bool Writable { get; }
+        //public IEnumerable<string> Children { get; }
 
         public NtStatus Open(FileAccess access, FileShare share, FileMode mode, FileOptions options,
             FileAttributes attributes, out IFileHandle handle);

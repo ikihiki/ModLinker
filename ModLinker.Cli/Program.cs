@@ -4,11 +4,19 @@ using Microsoft.DotNet.Interactive.Formatting;
 
 namespace ModLinker.Cli
 {
+    class Rule
+    {
+
+    }
+
+
+
     class Program
     {
         static void Main(string[] args)
         {
             Console.WriteLine("Hello World!");
+
             var target = new Target
             {
                 RootPath = @"C:\Users\ibuki\source\repos\ModLinker\ModLinker.Cli\TestDir\Root",
@@ -24,16 +32,17 @@ namespace ModLinker.Cli
                 },
                 OverlayPath = @"C:\Users\ibuki\source\repos\ModLinker\ModLinker.Cli\TestDir\Overlay"
             };
-            var manager = new LayerService(target, new[] { new DirectoryLayerProvider() });
+
+            var provider = new DirectoryLayerProvider();
+
+            var manager = new LayerService(new[] { new DirectoryLayerProvider() });
             if (args.Length < 2)
             {
 
 
                 Console.CancelKeyPress += (sender, eventArgs) => manager.Dispose();
-                manager.Notify += () => ShowFiles(manager);
                 ShowFiles(manager);
                 while (Console.Read() != 'q') ;
-                manager.Dispose();
             }
             else
             {

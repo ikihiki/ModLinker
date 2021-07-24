@@ -16,25 +16,31 @@ namespace ModLinker
 
         public IEnumerable<ILayer> CreateLayer(Mod mod)
         {
-            return mod.Links.Select(link => new DirectoryLayer(mod, link));
+            return mod.Links.Select(link => new DirectoryLayer(Guid.NewGuid().ToString(), this, mod, link, 0));
         }
     }
 
     public class DirectoryLayer : ILayer
     {
         private readonly Mod mod;
-        private readonly Link link;
-        private readonly string[] rootParts;
-        private readonly string modLinkRootPath;
         private readonly DirectoryInfo rootDirectoryInfo;
+        private readonly PathMapper pathMapper;
+        private bool writable;
+        public string Id { get; }
+        public ILayerProvider Provider { get; }
+        public Link Link { get; }
+        private uint priority;
 
-        public DirectoryLayer(Mod mod, Link link)
+        public DirectoryLayer(string id, ILayerProvider provider, Mod mod, Link link, uint priority, bool writable=false)
         {
+            Id = id;
+            Provider = provider;
             this.mod = mod;
-            this.link = link;
-            rootParts = link.TargetPath.Split('\\');
-            modLinkRootPath = Path.Combine(mod.ModPath, mod.RootPath, link.ModPath);
-            rootDirectoryInfo = new DirectoryInfo(modLinkRootPath);
+            this.Link = link;
+            this.priority = priority;
+            this.writable = writable;
+            pathMapper = new PathMapper(Path.Combine(mod.ModPath, link.ModPath), Path.Combine(mod.RootPath, link.TargetPath));
+            rootDirectoryInfo = new DirectoryInfo(pathMapper.SourcePath);
         }
 
 
@@ -43,112 +49,90 @@ namespace ModLinker
 
         }
 
-        public IEnumerable<string> GetAllDirectories()
-        {
-            throw new NotImplementedException();
-        }
-
-        public IEnumerable<string> GetAllFiles()
-        {
-            throw new NotImplementedException();
-        }
-
-        public Stream GetFile(string path)
-        {
-            throw new NotImplementedException();
-        }
-
-        public IEnumerable<IEntry> GetEntries(string path)
-        {
-            var parts = path.Split('\\', StringSplitOptions.RemoveEmptyEntries);
-            if (parts.Length >= rootParts.Length)
-            {
-                if (path.StartsWith("\\"+link.TargetPath))
-                {
-                    return GetSubEntries(parts);
-                }
-                else
-                {
-                    return Enumerable.Empty<IEntry>();
-                }
-
-            }
-            else
-            {
-                return GetEntriesPartToRoot(parts);
-            }
-        }
-
-        public event Action<string> CreateNotify;
-        public event Action<string> UpdateNotify;
-        public event Action<string> DeleteNotify;
-        public event Action<(string oldPath, string newPath)> RenameNotify;
-
-        public event Action<IEntry> Notify;
-
-
-        private IEnumerable<IEntry> GetEntriesPartToRoot(string[] parts)
-        {
-            for (int i = 0; i < rootParts.Length; i++)
-            {
-                if (parts.Length <= i)
-                {
-                    return new[]
-                    {
-                        new DirectoryEntry("\\" + Path.Combine(rootParts.Take(i+1).ToArray()),"", this,false)
-                    };
-                }
-
-                if (parts[i] != rootParts[i])
-                {
-                    return Enumerable.Empty<IEntry>();
-                }
-            }
-            return Enumerable.Empty<IEntry>();
-        }
-
-        private IEnumerable<IEntry> GetSubEntries(string[] parts)
-        {
-
-
-            var path = Path.Combine(Enumerable
-                .Concat(new[] { modLinkRootPath }, parts.Skip(rootParts.Length)).ToArray());
-
-            if (!System.IO.Directory.Exists(path))
-            {
-                return Enumerable.Empty<IEntry>();
-            }
-
-            var dirs = System.IO.Directory.GetDirectories(path)
-                .Select(CreateEntryFromDirectory);
-            var files = System.IO.Directory.GetFiles(path)
-                .Select(CreateEntryFromFile);
-            return Enumerable.Concat(dirs, files);
-
-
-        }
-
         private IEntry CreateEntryFromFile(string file)
         {
             var info = new FileInfo(file);
             return new FileEntry(
-                "\\" + Path.Combine(link.TargetPath, Path.GetRelativePath(modLinkRootPath, file)),
+                pathMapper.GetMappedPath(file),
                 file,
                 this,
-                false
+                writable
             );
         }
         private IEntry CreateEntryFromDirectory(string dir)
         {
             return new DirectoryEntry(
-                "\\" + Path.Combine(link.TargetPath, Path.GetRelativePath(modLinkRootPath, dir)),
+                pathMapper.GetMappedPath(dir),
                 dir,
                 this,
-                false
+                writable
             );
         }
 
 
 
+
+        public IEnumerable<EntryData> GetPreloadEntries()
+        {
+            return rootDirectoryInfo.EnumerateFileSystemInfos()
+                    .Select(info => new EntryData(
+                        info.Attributes.HasFlag(FileAttributes.Directory),
+                        info.Name,
+                        pathMapper.GetMappedPath(info.FullName),
+                        pathMapper.GetMappedPath(Path.GetDirectoryName(info.FullName)),
+                        info.Attributes.HasFlag(FileAttributes.Directory),
+                        this,
+                        info.CreationTime,
+                        info.LastAccessTime,
+                        info.LastWriteTime,
+                        (info as FileInfo)?.Length ?? 0,
+                        writable,
+                        priority
+                    ))
+                ;
+        }
+
+        public IEnumerable<EntryData> GetEntries(string path)
+        {
+            var sourcePath = pathMapper.GetSourcePath(path);
+            if (Directory.Exists(sourcePath))
+            {
+                return new DirectoryInfo(sourcePath)
+                        .EnumerateFileSystemInfos()
+                        .Select(info => new EntryData(
+                            info.Attributes.HasFlag(FileAttributes.Directory),
+                            info.Name,
+                            pathMapper.GetMappedPath(info.FullName),
+                            pathMapper.GetMappedPath(Path.GetDirectoryName(info.FullName)),
+                            info.Attributes.HasFlag(FileAttributes.Directory),
+                            this,
+                            info.CreationTime,
+                            info.LastAccessTime,
+                            info.LastWriteTime,
+                            (info as FileInfo)?.Length ?? 0,
+                            writable,
+                            priority
+                        ))
+                    ;
+            }
+
+            return Enumerable.Empty<EntryData>();
+        }
+
+        public IEntry GetEntry(string path)
+        {
+            var sourcePath = pathMapper.GetSourcePath(path);
+            if (Directory.Exists(sourcePath))
+            {
+                return CreateEntryFromDirectory(sourcePath);
+            }
+
+            if (File.Exists(sourcePath))
+            {
+                return CreateEntryFromFile(sourcePath);
+            }
+
+            return null;
+        }
     }
 }

@@ -68,7 +68,7 @@ namespace ModLinker
         //}
         //private (IEnumerable<Directory> directory, IEnumerable<File> file) GetDirectoriesAndFilesFromDrectory(Mod mod)
         //{
-        //    var rootDir = new DirectoryInfo(Path.Combine(mod.EntityPath, mod.RootPath));
+        //    var rootDir = new DirectoryInfo(Path.Combine(mod.EntityPath, mod.SourcePath));
         //    if (!rootDir.Exists)
         //    {
         //        return (Enumerable.Empty<Directory>(), Enumerable.Empty<File>());

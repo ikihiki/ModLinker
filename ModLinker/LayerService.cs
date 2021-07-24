@@ -3,90 +3,129 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Security;
 using System.Text;
 using System.Threading.Tasks;
 using DokanNet;
+using LiteDB;
 
 namespace ModLinker
 {
-    public class LayerService:IDisposable
+
+    public class EntryDataDto
     {
-        private readonly Target target;
-        private readonly IEnumerable<Mod> mods;
-        private readonly IEnumerable<ILayerProvider> layerProviders;
-        private readonly List<ILayer> layerList = new List<ILayer>();
-        public event Action Notify;
+        private ObjectId Id { get; set; }
+        public bool IsLazy { get; set; }
+        public string ParentDirectory { get; set; }
+        public string Path { get; set; }
+        public bool IsDirectory { get; set; }
+        public string LayerId { get; set; }
+        public DateTime? CreationTime { get; set; }
+        public DateTime? LastAccessTime { get; set; }
+        public DateTime? LastWriteTime { get; set; }
+        public long Length { get; set; }
+        public bool Writable { get; set; }
+        public uint Priority { get; set; }
 
-        public LayerService(Target target, IEnumerable<ILayerProvider> layerProviders)
+        public EntryDataDto(){}
+
+        public EntryDataDto(EntryData entryData)
         {
-            this.target = target;
-            this.mods = target.Mods;
-            this.layerProviders = layerProviders;
-            layerList.Add(new  BaseLayer(target.BasePath));
-            foreach (var mod in mods)
-            {
-                var layers = GetLayers(mod);
-                if (layers != null)
-                {
-                    layerList.AddRange(layers);
-                }
-            }
-
-            layerList.Add(new OverlayLayer(target.OverlayPath));
-            foreach (var layer in layerList)
-            {
-                //layer.CreateNotify+=LayerOnNotify;
-            }
+            IsLazy = entryData.IsLazy;
+            ParentDirectory = entryData.ParentDirectory;
+            Path = entryData.Path;
+            IsDirectory = entryData.IsDirectory;
+            LayerId = entryData.Layer.Id;
+            CreationTime = entryData.CreationTime;
+            LastAccessTime = entryData.LastAccessTime;
+            LastWriteTime = entryData.LastWriteTime;
+            Length = entryData.Length;
+            Writable = entryData.Writable;
+            Priority = entryData.Priority;
         }
 
-        private void LayerOnNotify(IEntry obj)
+        public static IEnumerable<EntryDataDto> Convert(IEnumerable<EntryData> source)
         {
-            Notify?.Invoke();
+            return source.Select(entry => new EntryDataDto(entry));
+        }
+    }
+
+    public class LayerService
+    {
+        private readonly Dictionary<string, ILayer> layers;
+        private readonly ILiteDatabase database;
+        private readonly ILiteCollection<EntryDataDto> collection;
+        private readonly PathMapper mapper;
+
+        public LayerService(IEnumerable<ILayer> layers, string targetRoot)
+        {
+            this.layers = layers.ToDictionary(layer => layer.Id);
+            mapper = new PathMapper("", targetRoot);
+            database = new LiteDatabase(@"mydata.db");
+            collection = database.GetCollection<EntryDataDto>("entry");
+            collection.DeleteAll();
+        }
+
+        public async ValueTask PreLoad()
+        {
+            foreach (var layer in layers.Values)
+            {
+                var entries = EntryDataDto.Convert(layer.GetPreloadEntries());
+                collection.Upsert(entries);
+            }
         }
 
         public IEnumerable<IEntry> GetEntries(string path)
         {
-            var entries = new Dictionary<string, IEntry>();
+            var frags = mapper.GetPathFragmentsFromTargetPath(path);
 
-            foreach (var entry in layerList.SelectMany(layer => layer.GetEntries(path)))
+            foreach (var frag in frags)
             {
-                entries[entry.Path] = entry;
-            }
-            return entries.Values;
-        }
-
-        private IEnumerable<ILayer> GetLayers(Mod mod)
-        {
-            foreach (var layerProvider in layerProviders)
-            {
-                if (layerProvider.CanCreateLayer(mod))
+                var e = FindEntry(frag);
+                ;
+                if (e.IsLazy)
                 {
-                    return layerProvider.CreateLayer(mod);
+                    var layer = layers[e.LayerId];
+                    var es = layer.GetEntries(frag);
+                    collection.Upsert(EntryDataDto.Convert(es));
                 }
             }
 
-            return null;
-        }
+            var result = collection.Find(dto => dto.ParentDirectory == path)
+                    .GroupBy(dto => dto.Path)
+                    .Select(g => g.OrderBy(dto => dto.Priority).FirstOrDefault())
+                    .Where(dto => dto != null)
+                    .Select(dto => layers[dto.LayerId].GetEntry(dto.Path))
+                    .ToArray()
+                ;
 
-
-        public void CreateDatabase()
-        {
-
-        }
-
-        public void Dispose()
-        {
-            foreach (var layer in layerList)
-            {
-                layer.Dispose();
-            }
-            layerList.Clear();
+            return result;
         }
 
         public IEntry GetEntry(string fileName)
         {
-            throw new NotImplementedException();
+            var frags = mapper.GetPathFragmentsFromTargetPath(fileName);
+
+            foreach (var frag in frags.SkipLast(1))
+            {
+                var e = FindEntry(frag);
+                ;
+                if (e?.IsLazy == true)
+                {
+                    var layer = layers[e.LayerId];
+                    var es = layer.GetEntries(frag);
+                    collection.Upsert(EntryDataDto.Convert(es));
+                }
+            }
+
+            var result = collection.Find(dto => dto.Path == fileName)
+                    .OrderBy(dto => dto.Priority)
+                    .Select(dto => layers[dto.LayerId].GetEntry(dto.Path))
+                    .FirstOrDefault()
+                ;
+
+            return result;
         }
 
         internal IFileHandle UpdateWritable(IFileHandle handle)
@@ -112,6 +151,15 @@ namespace ModLinker
         public IEntry UpdateWritable(IEntry handle)
         {
             throw new NotImplementedException();
+        }
+
+
+        private EntryDataDto FindEntry(string path)
+        {
+            return collection.Find(dto => dto.Path == path)
+                    .OrderBy(dto => dto.Priority)
+                    .FirstOrDefault()
+                ;
         }
     }
 }

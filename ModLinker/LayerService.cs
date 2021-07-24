@@ -62,7 +62,8 @@ namespace ModLinker
         {
             this.layers = layers.ToDictionary(layer => layer.Id);
             mapper = new PathMapper("", targetRoot);
-            database = new LiteDatabase(@"mydata.db");
+            var rand = new Random();
+            database = new LiteDatabase($"{DateTime.Now.Ticks}.{rand.Next()}.db");
             collection = database.GetCollection<EntryDataDto>("entry");
             collection.DeleteAll();
         }
